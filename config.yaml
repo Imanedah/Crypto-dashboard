@@ -1,0 +1,3 @@
+crypto: bitcoin
+currency: eur
+alert_threshold: 20000
