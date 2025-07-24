@@ -3,13 +3,12 @@ import sqlite3
 import datetime
 import time
 
-# Liste des cryptos qui fonctionnent bien
+# Liste des cryptos qui fonctionnent bien (sans Polkadot qui bug)
 CRYPTOS = {
     'bitcoin': 'Bitcoin (BTC)',
     'ethereum': 'Ethereum (ETH)', 
     'solana': 'Solana (SOL)',
-    'cardano': 'Cardano (ADA)',
-    'polkadot': 'Polkadot (DOT)'
+    'cardano': 'Cardano (ADA)'
 }
 
 def fetch_historical_prices(crypto='bitcoin', days=30, currency='eur'):
@@ -59,20 +58,68 @@ def store_historical_prices(prices, crypto='bitcoin'):
     conn.commit()
     conn.close()
 
-def fetch_current_price(crypto='bitcoin', currency='eur'):
-    """Récupère le prix actuel d'une crypto"""
-    url = f'https://api.coingecko.com/api/v3/simple/price?ids={crypto}&vs_currencies={currency}&include_24hr_change=true'
+def fetch_all_current_prices(currency='eur'):
+    """Récupère tous les prix actuels en une seule requête"""
+    crypto_ids = ','.join(CRYPTOS.keys())
+    url = f'https://api.coingecko.com/api/v3/simple/price?ids={crypto_ids}&vs_currencies={currency}&include_24hr_change=true'
+    
     try:
+        print(f"🔍 Récupération des prix actuels...")
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
-        return {
-            'price': data[crypto][currency],
-            'change_24h': data[crypto].get(f'{currency}_24h_change', 0)
-        }
+        
+        result = {}
+        for crypto_id in CRYPTOS.keys():
+            if crypto_id in data:
+                result[crypto_id] = {
+                    'price': data[crypto_id][currency],
+                    'change_24h': data[crypto_id].get(f'{currency}_24h_change', 0)
+                }
+            else:
+                result[crypto_id] = {'price': 0, 'change_24h': 0}
+        
+        print(f"✅ Prix actuels récupérés pour {len(result)} cryptos")
+        return result
+        
     except Exception as e:
-        print(f"Erreur lors de la récupération du prix actuel pour {crypto}: {e}")
-        return {'price': 0, 'change_24h': 0}
+        print(f"❌ Erreur lors de la récupération des prix actuels: {e}")
+        # Retourner des valeurs par défaut
+        return {crypto_id: {'price': 0, 'change_24h': 0} for crypto_id in CRYPTOS.keys()}
+
+def fetch_all_current_prices(currency='eur'):
+    """Récupère tous les prix actuels en une seule requête"""
+    crypto_ids = ','.join(CRYPTOS.keys())
+    url = f'https://api.coingecko.com/api/v3/simple/price?ids={crypto_ids}&vs_currencies={currency}&include_24hr_change=true'
+    
+    try:
+        print(f"🔍 Récupération des prix actuels...")
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        result = {}
+        for crypto_id in CRYPTOS.keys():
+            if crypto_id in data:
+                result[crypto_id] = {
+                    'price': data[crypto_id][currency],
+                    'change_24h': data[crypto_id].get(f'{currency}_24h_change', 0)
+                }
+            else:
+                result[crypto_id] = {'price': 0, 'change_24h': 0}
+        
+        print(f"✅ Prix actuels récupérés pour {len(result)} cryptos")
+        return result
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des prix actuels: {e}")
+        # Retourner des valeurs par défaut
+        return {crypto_id: {'price': 0, 'change_24h': 0} for crypto_id in CRYPTOS.keys()}
+
+def fetch_current_price(crypto='bitcoin', currency='eur'):
+    """Fonction de compatibilité - utilise le cache global"""
+    all_prices = fetch_all_current_prices(currency)
+    return all_prices.get(crypto, {'price': 0, 'change_24h': 0})
 
 def fetch_price(crypto='bitcoin', currency='eur'):
     """Fonction de compatibilité - récupère juste le prix"""
